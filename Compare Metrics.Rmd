@@ -156,11 +156,4 @@ ggsave(Sensitivity_plot,filename = './CompareSensitivities.png',device = 'png',w
 ggsave(Specificity_plot,filename = './CompareSpecificity.png',device = 'png',width = 7,height = 7,units = 'in',dpi = 300,bg = 'white')
 ```
 
-```{r}
-write.csv(full_df_plot_Sens,file = 'Data for Sensitivity Plot.csv',quote = F,na = 'NA',row.names = T,col.names = T)
-```
-
-```{r}
-write.csv(full_df_plot_Spec,file = 'Data for Specificity Plot.csv',quote = F,na = 'NA',row.names = T,col.names = T)
-```
 
