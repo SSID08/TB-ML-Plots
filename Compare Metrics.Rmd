@@ -1,0 +1,157 @@
+```{r}
+library(dplyr)
+library(readxl)
+library(tidyverse)
+```
+
+```{r}
+TB_profilerResults=data.frame(read_xlsx('./Supplementary Tables.xlsx',
+                                        sheet=2))
+TB_profilerResults=TB_profilerResults%>%select(c(1,2,6,7,8))
+TB_profilerResults=TB_profilerResults[c(1:13),]
+TB_profilerResults=TB_profilerResults%>%column_to_rownames('Drug')
+colnames(TB_profilerResults)=c('Num. Isolates','Acc.','Sens.','Spec.')
+TB_profilerResults$`Num. Isolates`=rep(NA,length(TB_profilerResults$`Num. Isolates`))
+TB_profilerResults=TB_profilerResults%>%select(Sens.,Spec.,Acc.,`Num. Isolates`)
+```
+
+```{r}
+Metrics_Deelder=data.frame(readxl::read_xlsx('./Supplementary Tables.xlsx',sheet =6))
+Metrics_Deelder=Metrics_Deelder[c(41:54),c(1:5)]
+colnames(Metrics_Deelder)=Metrics_Deelder[1,]
+Metrics_Deelder=Metrics_Deelder[-c(1,2),]
+Metrics_Deelder=Metrics_Deelder%>%mutate(across(c(2:5),as.numeric))
+Metrics_Deelder$Drug=as.factor(Metrics_Deelder$Drug)
+rownames(Metrics_Deelder)=NULL
+Metrics_Deelder=Metrics_Deelder%>%column_to_rownames('Drug')
+#Metrics_Deelder=Metrics_Deelder
+```
+
+```{r}
+Metrics_Green=data.frame(read_xlsx('./Supplementary Tables.xlsx',sheet = 6))
+Metrics_Green=Metrics_Green[c(10:23),c(1:5)]
+colnames(Metrics_Green)=Metrics_Green[1,]
+Metrics_Green=Metrics_Green[-c(1,2),]
+Metrics_Green=Metrics_Green%>%mutate(across(c(2:5),as.numeric))
+Metrics_Green$Drug=as.factor(Metrics_Green$Drug)
+rownames(Metrics_Green)=NULL
+Metrics_Green=Metrics_Green%>%column_to_rownames('Drug')
+```
+
+```{r}
+Metrics_Kuang=data.frame(readxl::read_xlsx('./Supplementary Tables.xlsx',sheet = 6))
+Metrics_Kuang=Metrics_Kuang[c(27:36),c(1:5)]
+colnames(Metrics_Kuang)=Metrics_Kuang[1,]
+Metrics_Kuang=Metrics_Kuang[-c(1,2),]
+Metrics_Kuang=Metrics_Kuang%>%mutate(across(c(2:5),as.numeric))
+Metrics_Kuang$Drug=as.factor(Metrics_Kuang$Drug)
+rownames(Metrics_Kuang)=NULL
+Metrics_Kuang=Metrics_Kuang%>%column_to_rownames('Drug')
+```
+
+```{r}
+Metrics_Kouchaki=data.frame(read_xlsx('./Supplementary Tables.xlsx',sheet = 6))
+Metrics_Kouchaki=Metrics_Kouchaki[c(70:82),c(1:6)]
+colnames(Metrics_Kouchaki)=Metrics_Kouchaki[1,]
+Metrics_Kouchaki=Metrics_Kouchaki[-c(1,2),]
+Metrics_Kouchaki=Metrics_Kouchaki%>%mutate(across(c(2:5),as.numeric))
+Metrics_Kouchaki$Drug=as.factor(Metrics_Kouchaki$Drug)
+rownames(Metrics_Kouchaki)=NULL
+Metrics_Kouchaki=Metrics_Kouchaki%>%column_to_rownames('Drug')
+```
+
+```{r}
+temp_Ks=merge(Metrics_Kuang,Metrics_Kouchaki,by='row.names',suffixes=c('_Kuang','_Kouchaki'))
+temp_Ks=temp_Ks%>%column_to_rownames('Row.names')
+```
+
+
+```{r}
+Lit_metrics=merge(Metrics_Deelder,Metrics_Green,by = 'row.names',suffixes = c('_Deelder','_Green'))
+Lit_metrics=Lit_metrics%>%column_to_rownames('Row.names')
+Lit_metrics=merge(TB_profilerResults,Lit_metrics,by='row.names',all.y = T)
+Lit_metrics=Lit_metrics%>%column_to_rownames('Row.names')
+Lit_metrics=Lit_metrics%>%rename('Num. Isolates_TBProfiler'=4,'Acc._TBProfiler'=3,'Sens._TBProfiler'=1,
+                                 'Spec._TBProfiler'=2)
+```
+
+```{r}
+Lit_metrics=merge(Lit_metrics,temp_Ks,by = 'row.names',all.x = T)
+Lit_metrics=Lit_metrics%>%rename('Num. Isolates_Kuang'=17,'Num. Isolates_Kouchaki'=21)
+Lit_metrics=Lit_metrics%>%column_to_rownames('Row.names')
+```
+
+
+```{r}
+Metrics_Sid=data.frame(read_xlsx('./Supplementary Tables.xlsx',sheet = 3))
+Metrics_Sid <- Metrics_Sid %>%
+               mutate(Drug..model.feature. = gsub(' \\(.*', '', Drug..model.feature.))
+Metrics_Sid=Metrics_Sid%>%mutate(across(c(2:6),~gsub('[^0-9\\.].*','',.)))
+colnames(Metrics_Sid)=c('Drug','Sens.','Spec.','Acc.','AUC','Num. Isolates')
+Metrics_Sid=Metrics_Sid%>%mutate(across(c(2:6),as.numeric))
+Metrics_Sid$Drug=as.factor(Metrics_Sid$Drug)
+rownames(Metrics_Sid)=NULL
+Metrics_Sid=Metrics_Sid%>%column_to_rownames('Drug')
+```
+
+```{r}
+full_df=merge(Metrics_Sid,Lit_metrics,by = 'row.names',all.x = T)
+full_df=full_df%>%mutate(Row.names=as.factor(Row.names))%>%rename('Drug'=1)
+full_df=full_df%>%mutate(across(contains('Num.'),~./1000))%>%mutate(across(contains('Num.'),~round(.,1)))
+```
+
+```{r}
+full_df=full_df%>%mutate(across(contains('TB'),as.numeric))
+```
+
+```{r}
+full_df_plot=full_df%>%pivot_longer(!c(Drug),names_to = 'Data',values_to = 'Values')
+full_df_plot_Sens=full_df_plot%>% filter(str_detect(Data,'Sens|Num.'))
+full_df_plot_Spec=full_df_plot%>% filter(str_detect(Data,'Spec|Num.'))
+```
+
+```{r}
+temp_obj=unlist(full_df_plot_Sens[seq(2,dim(full_df_plot_Sens)[1],2),"Values"])
+full_df_plot_Sens=full_df_plot_Sens[-c(seq(2,168,2)),]
+#full_df_plot_Sens=full_df_plot_Sens[-43,]
+full_df_plot_Spec=full_df_plot_Spec[-c(seq(2,168,2)),]
+#full_df_plot_Spec=full_df_plot_Spec[-43,]
+```
+
+```{r}
+#temp_obj=as.character(temp_obj,na.rm=T)
+#temp_obj=paste(temp_obj,'k',sep = "")
+```
+
+```{r}
+full_df_plot_Sens$Isolates=temp_obj
+full_df_plot_Spec$Isolates=temp_obj
+```
+
+```{r}
+Drug_order=rownames(Metrics_Sid)
+full_df_plot_Sens$Data=factor(full_df_plot_Sens$Data,levels = c('Sens._TBProfiler','Sens.','Sens._Deelder','Sens._Kouchaki','Sens._Kuang','Sens._Green'))
+full_df_plot_Spec$Data=factor(full_df_plot_Spec$Data,levels=c('Spec._TBProfiler','Spec.','Spec._Deelder','Spec._Kouchaki','Spec._Kuang','Spec._Green'))
+```
+
+```{r}
+Sensitivity_plot=ggplot(full_df_plot_Sens, aes(x = Drug, y = Values, fill = Data))+
+  geom_bar(stat='identity',position = position_dodge(),alpha=.8,col='black',size=.3)+
+  ylab('Specificity(%)')+geom_text(aes(label = Isolates,group=Data),hjust=-.1,size=2,position = position_dodge(w=0.9),angle=90)+
+  scale_x_discrete(limits=Drug_order)+scale_fill_brewer(name='Study',labels=c('TB_Profiler','GBT+F2','Deelder (GBT-CRM)','Kouchaki (Best Tree model)','Kuang (CNN)','Green (MD-CNN)'),palette = 'Set2')+theme_minimal()+theme(plot.margin = margin(0,0,1,1),legend.position = 'top',legend.justification = 'right',legend.key.size = unit(.2,units = 'cm'),legend.text = element_text(size = 8),legend.title = element_text(size=10,face = 'bold'),axis.title = element_text(size = 10,face='bold'),axis.text = element_text(size=8))
+```
+
+```{r}
+Specificity_plot=ggplot(full_df_plot_Spec, aes(x = Drug, y = Values, fill = Data))+
+  geom_bar(stat='identity',position = position_dodge(),alpha=.8,col='black',size=.3)+
+  ylab('Specificity(%)')+geom_text(aes(label = Isolates,group=Data),hjust=-.1,size=2,position = position_dodge(w=0.9),angle=90)+
+  scale_x_discrete(limits=Drug_order)+scale_fill_brewer(name='Study',labels=c('TB_Profiler','GBT+F2','Deelder (GBT-CRM)','Kouchaki (Best Tree model)','Kuang (CNN)','Green (MD-CNN)'),limits=c('Spec._TBProfiler','Spec.','Spec._Deelder','Spec._Kouchaki','Spec._Kuang','Spec._Green'),palette = 'Set2')+theme_minimal()+theme(plot.margin = margin(0,0,1,1),legend.position = 'top',legend.justification = 'right',legend.key.size = unit(.2,units = 'cm'),legend.text = element_text(size = 8),legend.title = element_text(size=10,face = 'bold'),axis.title = element_text(size = 10,face='bold'),axis.text = element_text(size=8))
+```
+
+```{r}
+ggsave(Sensitivity_plot,filename = './CompareSensitivities.png',device = 'png',width = 7,height = 7,units = 'in',dpi = 300,bg = 'white')
+```
+```{r}
+ggsave(Specificity_plot,filename = './CompareSpecificity.png',device = 'png',width = 7,height = 7,units = 'in',dpi = 300,bg = 'white')
+```
+save
