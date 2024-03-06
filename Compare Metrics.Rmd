@@ -51,7 +51,7 @@ Metrics_Kuang=Metrics_Kuang%>%column_to_rownames('Drug')
 
 ```{r}
 Metrics_Kouchaki=data.frame(read_xlsx('./Supplementary Tables.xlsx',sheet = 6))
-Metrics_Kouchaki=Metrics_Kouchaki[c(70:82),c(1:6)]
+Metrics_Kouchaki=Metrics_Kouchaki[c(70:82),c(1:5)]
 colnames(Metrics_Kouchaki)=Metrics_Kouchaki[1,]
 Metrics_Kouchaki=Metrics_Kouchaki[-c(1,2),]
 Metrics_Kouchaki=Metrics_Kouchaki%>%mutate(across(c(2:5),as.numeric))
@@ -151,7 +151,16 @@ Specificity_plot=ggplot(full_df_plot_Spec, aes(x = Drug, y = Values, fill = Data
 ```{r}
 ggsave(Sensitivity_plot,filename = './CompareSensitivities.png',device = 'png',width = 7,height = 7,units = 'in',dpi = 300,bg = 'white')
 ```
+
 ```{r}
 ggsave(Specificity_plot,filename = './CompareSpecificity.png',device = 'png',width = 7,height = 7,units = 'in',dpi = 300,bg = 'white')
 ```
-save
+
+```{r}
+write.csv(full_df_plot_Sens,file = 'Data for Sensitivity Plot.csv',quote = F,na = 'NA',row.names = T,col.names = T)
+```
+
+```{r}
+write.csv(full_df_plot_Spec,file = 'Data for Specificity Plot.csv',quote = F,na = 'NA',row.names = T,col.names = T)
+```
+
